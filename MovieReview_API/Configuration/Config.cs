@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using MovieReview_API.Data;
@@ -16,7 +16,6 @@ namespace MovieReview_API.Configuration
             _builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
             ConfigureServices();
 
             _app = _builder.Build();
@@ -40,8 +39,9 @@ namespace MovieReview_API.Configuration
             ConfigureSwagger();
 
             ConfigureAuth();
+
+            ConfigureCors();
         }
-        
 
         private void ConfigureSwagger()
         {
@@ -77,6 +77,19 @@ namespace MovieReview_API.Configuration
             }).AddEntityFrameworkStores<ApplicationDbContext>();
         }
 
+        private void ConfigureCors()
+        {
+            _builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", builder =>
+                {
+                    builder.AllowAnyOrigin()
+                           .AllowAnyMethod()
+                           .AllowAnyHeader();
+                });
+            });
+        }
+
         private void ConfigureApp()
         {
             // Configure the HTTP request pipeline.
@@ -88,21 +101,14 @@ namespace MovieReview_API.Configuration
 
             _app.UseHttpsRedirection();
 
+            _app.UseCors("AllowAll");
+
+            _app.UseAuthentication();
             _app.UseAuthorization();
 
             _app.MapControllers();
 
             _app.MapIdentityApi<IdentityUser>();
-
-            ConfigureCors();
-        }
-
-        private void ConfigureCors()
-        {
-            _app.UseCors(builder => builder
-                .AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader());
         }
 
         public void Run()
