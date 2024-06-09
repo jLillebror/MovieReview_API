@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -43,8 +44,6 @@ namespace MovieReview_API.Controllers
             return movieReview;
         }
 
-        // PUT: api/MovieReviews/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutMovieReview(int id, MovieReview movieReview)
         {
@@ -52,6 +51,20 @@ namespace MovieReview_API.Controllers
             {
                 return BadRequest();
             }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            // Ensure MovieId exists in the Movies table
+            if (!_context.Movies.Any(m => m.MovieId == movieReview.MovieId))
+            {
+                return BadRequest("The specified MovieId does not exist.");
+            }
+
+            movieReview.UserId = userId;
 
             _context.Entry(movieReview).State = EntityState.Modified;
 
@@ -74,14 +87,24 @@ namespace MovieReview_API.Controllers
             return NoContent();
         }
 
+        private bool MovieReviewExists(int id)
+        {
+            return _context.MovieReviews.Any(e => e.Id == id);
+        }
+
         // POST: api/MovieReviews
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<MovieReview>> PostMovieReview(MovieReview movieReview)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); 
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
 
             movieReview.UserId = userId;
+            movieReview.ReviewDate = DateTime.Now;
 
             _context.MovieReviews.Add(movieReview);
             await _context.SaveChangesAsync();
@@ -103,11 +126,6 @@ namespace MovieReview_API.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool MovieReviewExists(int id)
-        {
-            return _context.MovieReviews.Any(e => e.Id == id);
         }
     }
 }
